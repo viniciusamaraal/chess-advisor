@@ -74,6 +74,10 @@ body { font-family: sans-serif; display: flex; gap: 16px; padding: 16px; flex-wr
       <button class="btn" style="background:#0d6efd" onclick="loadPosition(document.getElementById('fenInput').value)">Carregar</button>
       <button class="btn" id="btnCopyFEN" style="background:#6c757d" onclick="copyFEN()">📋 FEN</button>
     </div>
+    <div style="display:flex;gap:4px;margin-top:4px;">
+      <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="loadFromImage(this)">
+      <button class="btn" style="background:#6f42c1;width:100%" onclick="document.getElementById('imgInput').click()">📷 Carregar de Screenshot</button>
+    </div>
   </div>
 </div>
 
@@ -101,6 +105,11 @@ body { font-family: sans-serif; display: flex; gap: 16px; padding: 16px; flex-wr
     <input id="apiKeyInput" type="password" placeholder="Chave API Anthropic (sk-ant-...)"
       style="flex:1;font-size:11px;padding:5px 6px;border:1px solid #ccc;border-radius:6px;outline:none;"
       oninput="anthropicKey=this.value;localStorage.setItem('anthropic_key',this.value)">
+  </div>
+  <div style="display:flex;gap:4px;margin-bottom:4px">
+    <input id="openaiKeyInput" type="password" placeholder="Chave API OpenAI (sk-...) — para screenshot"
+      style="flex:1;font-size:11px;padding:5px 6px;border:1px solid #ccc;border-radius:6px;outline:none;"
+      oninput="openaiKey=this.value;localStorage.setItem('openai_key',this.value)">
   </div>
   <div id="status" style="color:#f59e0b">⏳ Carregando Stockfish...</div>
   <button id="analyzeBtn" disabled onclick="analyze()">🔍 Analisar com Stockfish</button>
@@ -139,7 +148,7 @@ var INIT   = {
 };
 
 var board = {}, turn = "w", perspective = "b", selected = null, placing = null, mode = "move", lastUci = null;
-var anthropicKey = "";
+var anthropicKey = "", openaiKey = "";
 var moveHistory = [], redoStack = [], gameMoves = [], hintSquares = [];
 var sf = null, sfReady = false, sfResolve = null, sfPVs = {}, evalScore = null;
 var moveTime = 2000;
@@ -247,6 +256,115 @@ function loadPosition(text) {
   var firstToken = text.split(/\s+/)[0];
   if (firstToken.split("/").length === 8) { loadFEN(text); }
   else { loadPGN(text); }
+}
+
+function piecesListToFEN(raw, turn) {
+  var pm = {wK:"K",wQ:"Q",wR:"R",wB:"B",wN:"N",wP:"P",
+            bK:"k",bQ:"q",bR:"r",bB:"b",bN:"n",bP:"p"};
+  var nb = {};
+  // Find all piece+square tokens anywhere in the text (e.g. Ke1, nd4, Pa2, pe5)
+  var re = /([KQRBNPkqrbnp])([a-h])([1-8])/g;
+  var m;
+  while ((m = re.exec(raw)) !== null) {
+    var pc = m[1], sq = m[2] + m[3];
+    var isWhite = (pc >= "A" && pc <= "Z");
+    nb[sq] = (isWhite ? "w" : "b") + pc.toUpperCase();
+  }
+  if (Object.keys(nb).length < 2) return null;
+  var rows = [];
+  for (var rank = 8; rank >= 1; rank--) {
+    var row = ""; var empty = 0;
+    for (var fi = 0; fi < 8; fi++) {
+      var piece = nb[FILES[fi] + rank];
+      if (piece) { if (empty) { row += empty; empty = 0; } row += pm[piece] || ""; }
+      else empty++;
+    }
+    if (empty) row += empty;
+    rows.push(row);
+  }
+  return rows.join("/") + " " + (turn || "w") + " KQkq - 0 1";
+}
+
+function loadFromImage(input) {
+  if (!input.files || !input.files[0]) return;
+  if (!openaiKey && !anthropicKey) { alert("Insira uma chave API (OpenAI ou Anthropic) para usar esta função."); return; }
+  var file = input.files[0];
+  var fenInput = document.getElementById("fenInput");
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var mediaType = file.type || "image/jpeg";
+    var base64 = e.target.result.split(",")[1];
+    var dataUrl = "data:" + mediaType + ";base64," + base64;
+    fenInput.value = "Analisando imagem...";
+    var orientHint = perspective === "w" ? "white's perspective (a1 bottom-left)" : "black's perspective (a1 top-right)";
+    var prompt =
+      "This chess board is displayed from " + orientHint + ".\n" +
+      "Use the visible rank (1-8) and file (a-h) labels on the board to identify every square.\n\n" +
+      "Output ONLY a FEN string. No explanation, no steps, no reasoning — just the FEN.\n" +
+      "Include the turn (w or b), use KQkq for castling rights, and 0 1 for move clocks.\n" +
+      "Example: rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 1";
+
+    function extractFEN(raw) {
+      var fenPattern = /[rnbqkpRNBQKP1-8]{1,8}(?:\/[rnbqkpRNBQKP1-8]{1,8}){7}(?:\s+[wb]\s+\S+\s+\S+\s+\d+\s+\d+)?/;
+      var m = raw.match(fenPattern);
+      return m ? m[0].trim() : null;
+    }
+
+    var fetchPromise;
+    if (openaiKey) {
+      // GPT-4o
+      fetchPromise = fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + openaiKey },
+        body: JSON.stringify({
+          model: "gpt-4o", max_tokens: 100,
+          messages: [{role: "user", content: [
+            {type: "image_url", image_url: {url: dataUrl}},
+            {type: "text", text: prompt}
+          ]}]
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) throw new Error(data.error.message);
+        return extractFEN((data.choices[0].message.content || "").trim());
+      });
+    } else {
+      // Claude (extended thinking)
+      fetchPromise = fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": anthropicKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-dangerous-direct-browser-access": "true"
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-6", max_tokens: 16000,
+          thinking: { type: "enabled", budget_tokens: 10000 },
+          messages: [{role: "user", content: [
+            {type: "image", source: {type: "base64", media_type: mediaType, data: base64}},
+            {type: "text", text: prompt}
+          ]}]
+        })
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(data) {
+        if (data.error) throw new Error(data.error.message);
+        var textBlock = (data.content || []).filter(function(b) { return b.type === "text"; })[0];
+        return extractFEN((textBlock ? textBlock.text : "").trim());
+      });
+    }
+
+    fetchPromise.then(function(fen) {
+      if (!fen) { alert("Não foi possível extrair a posição. Tente outra imagem."); fenInput.value = ""; return; }
+      fenInput.value = fen;
+      loadPosition(fen);
+    }).catch(function(e) { alert("Erro: " + e.message); fenInput.value = ""; });
+
+    input.value = "";
+  };
+  reader.readAsDataURL(file);
 }
 
 // ── PGN import ───────────────────────────────────────────────────────────────
@@ -758,6 +876,8 @@ window.onload = function() {
   renderEvalBar();
   var saved = localStorage.getItem("anthropic_key");
   if (saved) { anthropicKey = saved; document.getElementById("apiKeyInput").value = saved; }
+  var savedOai = localStorage.getItem("openai_key");
+  if (savedOai) { openaiKey = savedOai; document.getElementById("openaiKeyInput").value = savedOai; }
 };
 </script>
 </body>
