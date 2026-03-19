@@ -291,7 +291,7 @@ function loadFromImage(input) {
     fetch("https://v1994-chess-fen-api.hf.space/fen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ image: base64, black_view: perspective === "b" })
+      body: JSON.stringify({ image: base64, black_view: perspective === "b", turn: perspective })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
