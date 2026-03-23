@@ -1,6 +1,6 @@
 
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="UTF-8"/>
 <title>Chess Advisor</title>
@@ -60,23 +60,23 @@ body { font-family: sans-serif; display: flex; gap: 16px; padding: 16px; flex-wr
   <div>
     <div id="board"></div>
     <div class="controls">
-      <button class="btn" style="background:#6c757d" onclick="resetBoard()">↺ Reiniciar</button>
-      <button class="btn" style="background:#dc3545" onclick="clearBoard()">🗑 Limpar</button>
-      <button class="btn" id="btnMove" style="background:#0d6efd" onclick="setMode('move')">✋ Mover</button>
-      <button class="btn" id="btnErase" style="background:#adb5bd" onclick="setMode('erase')">✖ Apagar</button>
-      <button class="btn" style="background:#6f42c1" onclick="undoMove()">↩ Desfazer</button>
-      <button class="btn" style="background:#6f42c1" onclick="redoMove()">Avançar ↪</button>
+      <button class="btn" style="background:#6c757d" onclick="resetBoard()">↺ Reset</button>
+      <button class="btn" style="background:#dc3545" onclick="clearBoard()">🗑 Clear</button>
+      <button class="btn" id="btnMove" style="background:#0d6efd" onclick="setMode('move')">✋ Move</button>
+      <button class="btn" id="btnErase" style="background:#adb5bd" onclick="setMode('erase')">✖ Erase</button>
+      <button class="btn" style="background:#6f42c1" onclick="undoMove()">↩ Undo</button>
+      <button class="btn" style="background:#6f42c1" onclick="redoMove()">Redo ↪</button>
     </div>
     <div style="display:flex;gap:4px;margin-top:8px;">
-      <input id="fenInput" placeholder="Colar FEN ou PGN aqui..."
+      <input id="fenInput" placeholder="Paste FEN or PGN here..."
         style="flex:1;font-size:11px;padding:5px 6px;border:1px solid #ccc;border-radius:6px;outline:none;"
         onkeydown="if(event.key==='Enter')loadPosition(this.value)">
-      <button class="btn" style="background:#0d6efd" onclick="loadPosition(document.getElementById('fenInput').value)">Carregar</button>
+      <button class="btn" style="background:#0d6efd" onclick="loadPosition(document.getElementById('fenInput').value)">Load</button>
       <button class="btn" id="btnCopyFEN" style="background:#6c757d" onclick="copyFEN()">📋 FEN</button>
     </div>
     <div style="display:flex;gap:4px;margin-top:4px;">
       <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="loadFromImage(this)">
-      <button class="btn" style="background:#6f42c1;width:100%" onclick="document.getElementById('imgInput').click()">📷 Carregar de Screenshot</button>
+      <button class="btn" style="background:#6f42c1;width:100%" onclick="document.getElementById('imgInput').click()">📷 Load from Screenshot</button>
       <div id="modelInfo" style="font-size:11px;color:#888;margin-top:4px;text-align:center;display:none"></div>
     </div>
   </div>
@@ -84,34 +84,34 @@ body { font-family: sans-serif; display: flex; gap: 16px; padding: 16px; flex-wr
 
 <div id="panel">
   <div class="palette">
-    <div class="pal-title">COLOCAR PEÇA</div>
+    <div class="pal-title">PLACE PIECE</div>
     <div class="pal-row" id="rowW"></div>
     <div class="pal-row" id="rowB"></div>
   </div>
 
   <div class="turn-row">
-    <span>Perspectiva:</span>
-    <button class="btn" id="btnW" style="background:#adb5bd" onclick="setPerspective('w')">⬜ Brancas</button>
-    <button class="btn" id="btnB" style="background:#198754" onclick="setPerspective('b')">⬛ Pretas</button>
+    <span>Perspective:</span>
+    <button class="btn" id="btnW" style="background:#adb5bd" onclick="setPerspective('w')">⬜ White</button>
+    <button class="btn" id="btnB" style="background:#198754" onclick="setPerspective('b')">⬛ Black</button>
   </div>
 
   <div class="time-row">
-    <span>Tempo:</span>
+    <span>Time:</span>
     <input type="range" id="timeSlider" min="500" max="5000" step="500" value="2000"
       oninput="moveTime=+this.value;document.getElementById('timeLabel').textContent=(moveTime/1000).toFixed(1)+'s'">
     <span id="timeLabel">2.0s</span>
   </div>
 
   <div style="display:flex;gap:4px;margin-bottom:4px">
-    <input id="apiKeyInput" type="password" placeholder="Chave API Anthropic (sk-ant-...)"
+    <input id="apiKeyInput" type="password" placeholder="Anthropic API Key (sk-ant-...)"
       style="flex:1;font-size:11px;padding:5px 6px;border:1px solid #ccc;border-radius:6px;outline:none;"
       oninput="anthropicKey=this.value;localStorage.setItem('anthropic_key',this.value)">
   </div>
-  <div id="status" style="color:#f59e0b">⏳ Carregando Stockfish...</div>
-  <button id="analyzeBtn" disabled onclick="analyze()">🔍 Analisar com Stockfish</button>
+  <div id="status" style="color:#f59e0b">⏳ Loading Stockfish...</div>
+  <button id="analyzeBtn" disabled onclick="analyze()">🔍 Analyze with Stockfish</button>
 
   <div id="result">
-    <div style="font-size:12px;font-weight:700;color:#0d6efd;margin-bottom:6px">♟ TOP JOGADAS (Stockfish)</div>
+    <div style="font-size:12px;font-weight:700;color:#0d6efd;margin-bottom:6px">♟ TOP MOVES (Stockfish)</div>
     <div id="bestmove"></div>
     <div id="evalinfo" style="font-size:11px;color:#999;margin-bottom:4px"></div>
     <div id="topmoves"></div>
@@ -119,22 +119,22 @@ body { font-family: sans-serif; display: flex; gap: 16px; padding: 16px; flex-wr
   </div>
 
   <div id="movelist">
-    <div class="movelist-title">📋 Partida</div>
+    <div class="movelist-title">📋 Game</div>
     <div id="movelistbody"></div>
-    <button class="btn" id="btnCopyPGN" style="background:#198754;width:100%;margin-top:8px" onclick="copyPGN()">📤 Copiar PGN</button>
+    <button class="btn" id="btnCopyPGN" style="background:#198754;width:100%;margin-top:8px" onclick="copyPGN()">📤 Copy PGN</button>
   </div>
 
   <div id="expl">
-    <div class="expl-title">💡 EXPLICAÇÃO</div>
+    <div class="expl-title">💡 EXPLANATION</div>
     <div id="explbody"></div>
   </div>
 </div>
 
 <script>
 var GLYPHS = {wK:"♔",wQ:"♕",wR:"♖",wB:"♗",wN:"♘",wP:"♙",bK:"♚",bQ:"♛",bR:"♜",bB:"♝",bN:"♞",bP:"♟"};
-var NAMES  = {wK:"Rei B",wQ:"Dama B",wR:"Torre B",wB:"Bispo B",wN:"Cavalo B",wP:"Peão B",bK:"Rei P",bQ:"Dama P",bR:"Torre P",bB:"Bispo P",bN:"Cavalo P",bP:"Peão P"};
+var NAMES  = {wK:"King (W)",wQ:"Queen (W)",wR:"Rook (W)",wB:"Bishop (W)",wN:"Knight (W)",wP:"Pawn (W)",bK:"King (B)",bQ:"Queen (B)",bR:"Rook (B)",bB:"Bishop (B)",bN:"Knight (B)",bP:"Pawn (B)"};
 var PT     = {K:"K",Q:"Q",R:"R",B:"B",N:"N",P:""};
-var PIECE_FULL = {K:"Rei",Q:"Rainha",R:"Torre",B:"Bispo",N:"Cavalo",P:"Peão"};
+var PIECE_FULL = {K:"King",Q:"Queen",R:"Rook",B:"Bishop",N:"Knight",P:"Pawn"};
 var FILES  = ["a","b","c","d","e","f","g","h"];
 var RANKS  = [8,7,6,5,4,3,2,1];
 var INIT   = {
@@ -225,7 +225,7 @@ function loadFEN(fen) {
   if (!fen) return;
   var parts = fen.split(/\s+/);
   var rows = parts[0].split("/");
-  if (rows.length !== 8) { alert("FEN inválido: precisa de 8 fileiras separadas por /"); return; }
+  if (rows.length !== 8) { alert("Invalid FEN: must have 8 ranks separated by /"); return; }
   var pm = {K:"wK",Q:"wQ",R:"wR",B:"wB",N:"wN",P:"wP",k:"bK",q:"bQ",r:"bR",b:"bB",n:"bN",p:"bP"};
   var nb = {};
   for (var ri2 = 0; ri2 < 8; ri2++) {
@@ -247,12 +247,12 @@ function loadFEN(fen) {
 }
 
 function clipCopy(text, btn, label) {
-  function done() { btn.textContent = "✅ Copiado"; setTimeout(function() { btn.textContent = label; }, 1500); }
+  function done() { btn.textContent = "✅ Copied"; setTimeout(function() { btn.textContent = label; }, 1500); }
   function fallback() {
     var ta = document.createElement("textarea");
     ta.value = text; ta.style.cssText = "position:fixed;top:0;left:0;width:2px;height:2px;opacity:0;";
     document.body.appendChild(ta); ta.focus(); ta.select();
-    try { document.execCommand("copy"); done(); } catch(e) { prompt("Copiar:", text); }
+    try { document.execCommand("copy"); done(); } catch(e) { prompt("Copy:", text); }
     document.body.removeChild(ta);
   }
   if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -304,7 +304,7 @@ function loadFromImage(input) {
   var reader = new FileReader();
   reader.onload = function(e) {
     var base64 = e.target.result.split(",")[1];
-    fenInput.value = "Analisando imagem...";
+    fenInput.value = "Analyzing image...";
     fetch("https://v1994-chess-fen-api.hf.space/fen", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -312,17 +312,17 @@ function loadFromImage(input) {
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-      if (data.error) { alert("Erro: " + data.error); fenInput.value = ""; return; }
+      if (data.error) { alert("Error: " + data.error); fenInput.value = ""; return; }
       var fen = data.fen;
-      if (!fen) { alert("Não foi possível extrair a posição. Tente outra imagem."); fenInput.value = ""; return; }
+      if (!fen) { alert("Could not extract position. Try another image."); fenInput.value = ""; return; }
       fenInput.value = fen;
       loadPosition(fen);
       var modelInfo = document.getElementById("modelInfo");
       var modelLabel = data.model_used === "duolingo" ? "🟢 Duolingo" : "⚪ Chess.com";
-      modelInfo.textContent = "Modelo: " + modelLabel;
+      modelInfo.textContent = "Model: " + modelLabel;
       modelInfo.style.display = "block";
     })
-    .catch(function(e) { alert("Erro de rede: " + e.message); fenInput.value = ""; });
+    .catch(function(e) { alert("Network error: " + e.message); fenInput.value = ""; });
     input.value = "";
   };
   reader.readAsDataURL(file);
@@ -396,7 +396,7 @@ function sanToMove(san, color) {
 
 function loadPGN(pgn) {
   var tokens = parsePGNMoves(pgn);
-  if (!tokens.length) { alert("PGN inválido ou sem lances"); return; }
+  if (!tokens.length) { alert("Invalid PGN or no moves"); return; }
 
   // Reset to initial position
   var nb = {}; for (var k in INIT) nb[k] = INIT[k];
@@ -411,7 +411,7 @@ function loadPGN(pgn) {
   for (var i = 0; i < tokens.length; i++) {
     var san = tokens[i];
     var mv = sanToMove(san, currentTurn);
-    if (!mv) { alert("Não foi possível aplicar o lance: \"" + san + "\" (lance " + (i+1) + ")"); break; }
+    if (!mv) { alert("Could not apply move: \"" + san + "\" (move " + (i+1) + ")"); break; }
 
     saveHistory(true); // keep redo — we'll build it after
     gameMoves.push({n: san.replace(/[+#]/g,""), c: currentTurn});
@@ -720,7 +720,7 @@ function initStockfish() {
       if (msg === "readyok") {
         sfReady = true;
         sf.postMessage("setoption name MultiPV value 3");
-        document.getElementById("status").textContent = "✅ Stockfish pronto";
+        document.getElementById("status").textContent = "✅ Stockfish ready";
         document.getElementById("status").style.color = "#10b981";
         document.getElementById("analyzeBtn").disabled = false;
         return;
@@ -743,7 +743,7 @@ function initStockfish() {
     };
     sf.postMessage("uci");
   } catch(e) {
-    document.getElementById("status").textContent = "❌ Erro: " + e.message;
+    document.getElementById("status").textContent = "❌ Error: " + e.message;
     document.getElementById("status").style.color = "#ef4444";
   }
 }
@@ -759,7 +759,7 @@ function getBestMove(fen) {
 function analyze() {
   if (!sfReady) return;
   document.getElementById("analyzeBtn").disabled = true;
-  document.getElementById("status").textContent = "🔍 Analisando...";
+  document.getElementById("status").textContent = "🔍 Analyzing...";
   document.getElementById("status").style.color = "#3b82f6";
   document.getElementById("result").style.display = "none";
   document.getElementById("expl").style.display = "none";
@@ -767,12 +767,12 @@ function analyze() {
   var fen = boardToFEN();
   getBestMove(fen).then(function(result) {
     document.getElementById("analyzeBtn").disabled = false;
-    document.getElementById("status").textContent = "✅ Análise concluída";
+    document.getElementById("status").textContent = "✅ Analysis complete";
     document.getElementById("status").style.color = "#10b981";
     var uci = result.bestmove, pvs = result.pvs;
     if (!uci || uci === "(none)") {
       document.getElementById("result").style.display = "block";
-      document.getElementById("bestmove").textContent = "Posição inválida ou sem jogadas.";
+      document.getElementById("bestmove").textContent = "Invalid position or no legal moves.";
       document.getElementById("topmoves").innerHTML = "";
       return;
     }
@@ -785,8 +785,8 @@ function analyze() {
 
     var evalStr = "";
     if (evalScore) {
-      if (evalScore.mate !== undefined) evalStr = "Mate em " + Math.abs(evalScore.mate);
-      else evalStr = "Avaliação: " + (evalScore.cp >= 0 ? "+" : "") + (evalScore.cp/100).toFixed(2);
+      if (evalScore.mate !== undefined) evalStr = "Mate in " + Math.abs(evalScore.mate);
+      else evalStr = "Evaluation: " + (evalScore.cp >= 0 ? "+" : "") + (evalScore.cp/100).toFixed(2);
     }
     document.getElementById("evalinfo").textContent = evalStr + "  ·  ⚡ Stockfish 10";
     document.getElementById("fenbox").textContent = "FEN: " + fen;
@@ -818,15 +818,15 @@ function getExplanation(fen, alg, uci) {
   var body = document.getElementById("explbody");
   expl.style.display = "block";
   if (!anthropicKey) {
-    body.innerHTML = "<p style='color:#f59e0b'>Insira sua chave API Anthropic para ver a explicação.</p>";
+    body.innerHTML = "<p style='color:#f59e0b'>Enter your Anthropic API key to see the explanation.</p>";
     return;
   }
-  body.innerHTML = "<p style='color:#aaa'>Gerando explicação...</p>";
-  var turnLabel = turn === "w" ? "Brancas" : "Pretas";
-  var prompt = "Você é um treinador de xadrez. Posição FEN: " + fen +
-    "\nÉ a vez das " + turnLabel + ". O Stockfish indicou: " + alg + " (UCI: " + uci + ")." +
-    "\n\nExplique em português:\n1. **Ideia principal** (1-2 frases)\n2. **Raciocínio** (2-3 frases)\n3. **Dica blitz** (1 frase)" +
-    "\n\nUse notação padrão (N=Cavalo,Q=Dama,R=Torre,B=Bispo,K=Rei).";
+  body.innerHTML = "<p style='color:#aaa'>Generating explanation...</p>";
+  var turnLabel = turn === "w" ? "White" : "Black";
+  var prompt = "You are a chess coach. Position FEN: " + fen +
+    "\nIt is " + turnLabel + "'s turn. Stockfish suggests: " + alg + " (UCI: " + uci + ")." +
+    "\n\nExplain in English:\n1. **Main idea** (1-2 sentences)\n2. **Reasoning** (2-3 sentences)\n3. **Blitz tip** (1 sentence)" +
+    "\n\nUse standard notation (N=Knight, Q=Queen, R=Rook, B=Bishop, K=King).";
   fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -839,13 +839,13 @@ function getExplanation(fen, alg, uci) {
   })
   .then(function(r) { return r.json(); })
   .then(function(data) {
-    if (data.error) { body.innerHTML = "<p style='color:#ef4444'>Erro: " + data.error.message + "</p>"; return; }
-    var text = data.content ? data.content.map(function(b) { return b.text || ""; }).join("") : "Sem resposta.";
+    if (data.error) { body.innerHTML = "<p style='color:#ef4444'>Error: " + data.error.message + "</p>"; return; }
+    var text = data.content ? data.content.map(function(b) { return b.text || ""; }).join("") : "No response.";
     body.innerHTML = text.split("\n").filter(function(l){return l.trim();}).map(function(l) {
       return "<p>" + l.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") + "</p>";
     }).join("");
   })
-  .catch(function(e) { body.innerHTML = "<p style='color:#ef4444'>Erro de rede: " + e.message + "</p>"; });
+  .catch(function(e) { body.innerHTML = "<p style='color:#ef4444'>Network error: " + e.message + "</p>"; });
 }
 
 window.onload = function() {
