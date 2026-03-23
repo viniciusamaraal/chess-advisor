@@ -77,6 +77,7 @@ body { font-family: sans-serif; display: flex; gap: 16px; padding: 16px; flex-wr
     <div style="display:flex;gap:4px;margin-top:4px;">
       <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="loadFromImage(this)">
       <button class="btn" style="background:#6f42c1;width:100%" onclick="document.getElementById('imgInput').click()">📷 Carregar de Screenshot</button>
+      <div id="modelInfo" style="font-size:11px;color:#888;margin-top:4px;text-align:center;display:none"></div>
     </div>
   </div>
 </div>
@@ -315,6 +316,10 @@ function loadFromImage(input) {
       if (!fen) { alert("Não foi possível extrair a posição. Tente outra imagem."); fenInput.value = ""; return; }
       fenInput.value = fen;
       loadPosition(fen);
+      var modelInfo = document.getElementById("modelInfo");
+      var modelLabel = data.model_used === "duolingo" ? "🟢 Duolingo" : "⚪ Chess.com";
+      modelInfo.textContent = "Modelo: " + modelLabel;
+      modelInfo.style.display = "block";
     })
     .catch(function(e) { alert("Erro de rede: " + e.message); fenInput.value = ""; });
     input.value = "";
