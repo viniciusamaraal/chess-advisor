@@ -134,6 +134,7 @@ body { font-family: sans-serif; display: flex; gap: 16px; padding: 16px; flex-wr
 var GLYPHS = {wK:"♔",wQ:"♕",wR:"♖",wB:"♗",wN:"♘",wP:"♙",bK:"♚",bQ:"♛",bR:"♜",bB:"♝",bN:"♞",bP:"♟"};
 var NAMES  = {wK:"Rei B",wQ:"Dama B",wR:"Torre B",wB:"Bispo B",wN:"Cavalo B",wP:"Peão B",bK:"Rei P",bQ:"Dama P",bR:"Torre P",bB:"Bispo P",bN:"Cavalo P",bP:"Peão P"};
 var PT     = {K:"K",Q:"Q",R:"R",B:"B",N:"N",P:""};
+var PIECE_FULL = {K:"Rei",Q:"Rainha",R:"Torre",B:"Bispo",N:"Cavalo",P:"Peão"};
 var FILES  = ["a","b","c","d","e","f","g","h"];
 var RANKS  = [8,7,6,5,4,3,2,1];
 var INIT   = {
@@ -777,8 +778,10 @@ function analyze() {
     }
     lastUci = uci;
     var alg = uciToAlg(uci);
+    var movingPiece = board[uci.slice(0,2)];
+    var pieceName = movingPiece ? (PIECE_FULL[movingPiece[1]] || "") : "";
     document.getElementById("result").style.display = "block";
-    document.getElementById("bestmove").textContent = alg;
+    document.getElementById("bestmove").textContent = (pieceName ? pieceName + ": " : "") + alg;
 
     var evalStr = "";
     if (evalScore) {
