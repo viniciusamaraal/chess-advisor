@@ -142,7 +142,7 @@ var INIT   = {
   a1:"wR",b1:"wN",c1:"wB",d1:"wQ",e1:"wK",f1:"wB",g1:"wN",h1:"wR"
 };
 
-var board = {}, turn = "w", perspective = "b", selected = null, placing = null, mode = "move", lastUci = null;
+var board = {}, turn = "w", perspective = "b", selected = null, placing = null, mode = "move", lastUci = null, epSquare = null;
 var anthropicKey = "";
 var moveHistory = [], redoStack = [], gameMoves = [], hintSquares = [];
 var sf = null, sfReady = false, sfResolve = null, sfPVs = {}, evalScore = null;
@@ -185,6 +185,20 @@ function updateUI() {
 }
 
 // ── FEN ─────────────────────────────────────────────────────────────────────
+function inferCastling(b) {
+  b = b || board;
+  var rights = "";
+  if (b["e1"] === "wK") {
+    if (b["h1"] === "wR") rights += "K";
+    if (b["a1"] === "wR") rights += "Q";
+  }
+  if (b["e8"] === "bK") {
+    if (b["h8"] === "bR") rights += "k";
+    if (b["a8"] === "bR") rights += "q";
+  }
+  return rights || "-";
+}
+
 function boardToFEN() {
   var fen = "";
   for (var ri = 0; ri < RANKS.length; ri++) {
@@ -201,7 +215,7 @@ function boardToFEN() {
     if (empty) fen += empty;
     if (rank > 1) fen += "/";
   }
-  return fen + " " + turn + " KQkq - 0 1";
+  return fen + " " + turn + " " + inferCastling() + " " + (epSquare || "-") + " 0 1";
 }
 
 function loadFEN(fen) {
@@ -222,6 +236,7 @@ function loadFEN(fen) {
   }
   board = nb;
   moveHistory = []; redoStack = []; gameMoves = []; selected = null; lastUci = null; hintSquares = []; evalScore = null;
+  epSquare = (parts[3] && parts[3] !== "-") ? parts[3] : null;
   document.getElementById("result").style.display = "none";
   document.getElementById("expl").style.display = "none";
   renderMoveList(); renderEvalBar();
@@ -277,7 +292,7 @@ function piecesListToFEN(raw, turn) {
     if (empty) row += empty;
     rows.push(row);
   }
-  return rows.join("/") + " " + (turn || "w") + " KQkq - 0 1";
+  return rows.join("/") + " " + (turn || "w") + " " + inferCastling(nb) + " - 0 1";
 }
 
 function loadFromImage(input) {
@@ -494,7 +509,11 @@ function getLegalMoves(sq) {
       if (rank === startRank) { var fwd2 = FILES[fi] + (rank + 2*dir); if (!board[fwd2]) moves.push(fwd2); }
     }
     [-1,1].forEach(function(df) {
-      if (fi+df >= 0 && fi+df <= 7) { var cs = FILES[fi+df]+(rank+dir); if (board[cs] && board[cs][0] !== color) moves.push(cs); }
+      if (fi+df >= 0 && fi+df <= 7) {
+        var cs = FILES[fi+df]+(rank+dir);
+        if (board[cs] && board[cs][0] !== color) moves.push(cs);
+        else if (epSquare && cs === epSquare) moves.push(cs); // en passant capture
+      }
     });
   } else if (type === "R") { slide([[1,0],[-1,0],[0,1],[0,-1]]);
   } else if (type === "B") { slide([[1,1],[1,-1],[-1,1],[-1,-1]]);
@@ -604,10 +623,10 @@ function renderEvalBar() {
 function snapshot() {
   var snap = {};
   for (var k in board) snap[k] = board[k];
-  return {board: snap, lastUci: lastUci, turn: turn, gameMoves: gameMoves.slice()};
+  return {board: snap, lastUci: lastUci, turn: turn, gameMoves: gameMoves.slice(), epSquare: epSquare};
 }
 function restoreSnapshot(s) {
-  board = s.board; lastUci = s.lastUci; gameMoves = s.gameMoves; turn = s.turn;
+  board = s.board; lastUci = s.lastUci; gameMoves = s.gameMoves; turn = s.turn; epSquare = s.epSquare || null;
   selected = null; hintSquares = [];
   renderBoard(); renderMoveList();
 }
@@ -639,14 +658,25 @@ function handleClick(sq) {
       var notation = moveToNotation(selected, sq);
       var nb = {};
       for (var k in board) nb[k] = board[k];
-      delete nb[selected]; nb[sq] = board[selected];
-      // Castling: king moves two squares → also move the rook
       var piece = board[selected];
-      if (piece && piece[1] === "K" && Math.abs(FILES.indexOf(sq[0]) - FILES.indexOf(selected[0])) === 2) {
+      delete nb[selected]; nb[sq] = piece;
+      // Castling: king moves two squares → also move the rook
+      if (piece[1] === "K" && Math.abs(FILES.indexOf(sq[0]) - FILES.indexOf(selected[0])) === 2) {
         var r = selected[1];
         if (sq[0] === "g") { nb["f"+r] = nb["h"+r]; delete nb["h"+r]; notation = "O-O"; }
         else               { nb["d"+r] = nb["a"+r]; delete nb["a"+r]; notation = "O-O-O"; }
       }
+      // En passant: pawn captures diagonally to empty ep square → remove the captured pawn
+      var newEp = null;
+      if (piece[1] === "P") {
+        if (epSquare && sq === epSquare && selected[0] !== sq[0]) {
+          delete nb[sq[0] + selected[1]]; // captured pawn sits on moving pawn's rank, ep file
+        }
+        if (Math.abs(parseInt(sq[1]) - parseInt(selected[1])) === 2) {
+          newEp = sq[0] + String((parseInt(selected[1]) + parseInt(sq[1])) / 2); // skipped square
+        }
+      }
+      epSquare = newEp;
       board = nb;
       gameMoves.push({n: notation, c: turn});
       turn = turn === "w" ? "b" : "w";
@@ -661,7 +691,7 @@ function handleClick(sq) {
 
 function resetBoard() {
   board = {}; for (var k in INIT) board[k] = INIT[k];
-  turn = "w";
+  turn = "w"; epSquare = null;
   selected = null; lastUci = null; moveHistory = []; redoStack = []; gameMoves = []; hintSquares = []; evalScore = null;
   document.getElementById("result").style.display = "none";
   document.getElementById("expl").style.display = "none";
